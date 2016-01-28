@@ -8,6 +8,7 @@
 
 import numpy as np
 import scipy.misc
+import scipy
 import matplotlib.image as imge
 import matplotlib.pyplot as plt 
 import cv2
@@ -21,21 +22,60 @@ import cv2
 # @retval 
 # NEED TO BE REFACTORED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 def OrientPyr( im,degree=0,N=8,sigma=5,lambd=10,gamma=0.5,psi=0 ):
+    imf = []
+    imd = []
     out = []
-    size = 8*sigma +5
-    for i in range(len(deg)):
-        theta = deg[i]* np.pi / 180
-        #getGaborKernel(ksize,sigma,theta,lambd,gamma,psi=CV_PI*0.5,ktype=CV_64F )
-        h = cv2.getGaborKernel((size, size), sigma, theta, lambd, gamma, psi)
-        
-        h /= h.sum()
-        # ---
-        '''plt.figure()
-        plt.imshow(h,cmap='Oranges')
-        # ---'''
-        temp = cv2.filter2D(im, -1, h)
-        out.append(temp)
+    
+    imTemp = np.copy( im )
+    
+    hGauss = np.array( [ [ 1.0, 4, 6, 4, 1 ], [ 4, 16, 24, 16, 4 ], [ 6, 24, 36, 24, 6 ], [ 4, 16, 24, 16, 4 ], [ 1, 4, 6, 4, 1 ] ] )
+    hGabor = cv2.getGaborKernel((size, size), sigma, theta, lambd, gamma, psi)  # size ??
+    hGabor /= hGabor.sum()
+
+    for i in range( N + 1 ):
+         imTemp2 = scipy.signal.convolve2D( imTemp, hGauss, mode = 'same' )
+         imf.append( imTemp2  ) # colocar o nome correto
+         # tgtSize = ( (src.cols + 1)/2, (scr.rows + 1)/2 )
+         imTemp = sp.misc.imresize( imTemp2, size = tgtSize )
+         imd.append( imTemp  )
+    
+    for i in range( N  ):
+        out.append( scipy.signal.convolve2D( imd[ i ] - imf[ i + 1 ], hGabor, mode='same' ) )
+
     return out
+         
+
+    #def GaussPyrImg( iimg, n ):
+    #    imp = []
+    #    for i in range(n):
+    #        tmp = cv2.pyrDown(iimg)
+    #        iimg = tmp
+    #        imp.append(tmp)
+    #    return imp
+    #    
+    #if (type(im) is type([])): # if it is a list
+    #    out = []
+    #    for j in range(len(im)):
+    #        out.append(GaussPyrImg(im[j],n))
+    #else:
+    #    out = GaussPyrImg( im, n )
+    #
+    #return out
+    #out = []
+    #size = 8*sigma +5
+    #for i in range(len(deg)):
+    #    theta = deg[i]* np.pi / 180
+    #    #getGaborKernel(ksize,sigma,theta,lambd,gamma,psi=CV_PI*0.5,ktype=CV_64F )
+    #    h = cv2.getGaborKernel((size, size), sigma, theta, lambd, gamma, psi)
+    #    
+    #    h /= h.sum()
+    #    # ---
+    #    '''plt.figure()
+    #    plt.imshow(h,cmap='Oranges')
+    #    # ---'''
+    #    temp = cv2.filter2D(im, -1, h)
+    #    out.append(temp)
+    #return out
 
 ## 
 # @brief This function creates a Gaussian pyramid of n levels
