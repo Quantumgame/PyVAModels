@@ -13,14 +13,14 @@ import matplotlib.pyplot as plt
 import cv2
 
 ## 
-# @brief 
+# @brief  
 #
 # @param 
 # @param 
 #
 # @retval 
-#
-def OrientGab( im,deg,sigma=5,lambd=10,gamma=0.5,psi=0 ):
+# NEED TO BE REFACTORED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+def OrientPyr( im,degree=0,N=8,sigma=5,lambd=10,gamma=0.5,psi=0 ):
     out = []
     size = 8*sigma +5
     for i in range(len(deg)):
@@ -38,14 +38,14 @@ def OrientGab( im,deg,sigma=5,lambd=10,gamma=0.5,psi=0 ):
     return out
 
 ## 
-# @brief 
+# @brief This function creates a Gaussian pyramid of n levels
+# @detail The core is the OpenCV function *pyrDown*, which filters (Gaussian filter) and then downsample the input image by a factor of 2. 
+# @param im: image from which the pyramid will be created
+# @param n: number of pyramid levels
 #
-# @param 
-# @param 
+# @retval out: list that contains the subimages that form the pyramid 
 #
-# @retval 
-#
-def GaussPyr( im, n ):
+def GaussPyr( im, n ):  #(VERIFIED)
 
     def GaussPyrImg( iimg, n ):
         imp = []
@@ -63,6 +63,7 @@ def GaussPyr( im, n ):
         out = GaussPyrImg( im, n )
 
     return out
+
 ## 
 # @brief 
 #
@@ -238,7 +239,7 @@ def ConspMapO( C, center, delta ):
 #
 # @retval SM: saliency map (numpy array)
 #
-def sm(img):
+def sm( img ):
     # Spliting in rgb and converting to float  (VERIFIED)
     rt = img[:,:,0].astype(float) # temporary r 
     gt = img[:,:,1].astype(float) # temporary g 
@@ -294,27 +295,29 @@ def sm(img):
     #plt.show()
     # --------------------------------------------------------------------------
 
-    # Calculation of orientation components
-    degrees = ( 0, 45, 90, 135 )
-    #sigma=5,lambd=10,gamma=0.5,psi=0 
-    O = OrientGab( I, degrees, sigma=20, lambd=60, gamma=1, psi=0 )
-
 
     # Creating the Gaussian pyramids
     N = 8 # pyramid levels
-    #Intensity
-    Ip = GaussPyr(I,N)
-    # Red
-    Rp = GaussPyr(R,N)
-    # Green
-    Gp = GaussPyr(G,N)
-    # Blue
-    Bp = GaussPyr(B,N)
-    # Yellow
-    Yp = GaussPyr(Y,N)
-
-    # Orientation pyramids
-    Op = GaussPyr(O,N)
+    Ip   = GaussPyr(I,N)                  #Intensity
+    Rp   = GaussPyr(R,N)                  # Red
+    Gp   = GaussPyr(G,N)                  # Green
+    Bp   = GaussPyr(B,N)                  # Blue
+    Yp   = GaussPyr(Y,N)                  # Yellow
+    O0   = OrientPyr(I, degrees = 0,  N)  # Calculation of orientation components
+    O45  = OrientPyr(I, degrees = 45, N)  # Calculation of orientation components
+    O90  = OrientPyr(I, degrees = 90, N)  # Calculation of orientation components
+    O135 = OrientPyr(I, degrees = 135,N)  # Calculation of orientation components
+   
+    # for test purpose only: comment or erase it after verification ------------
+    for i in range(N):
+         plt.figure()
+         plt.imshow(Op[i,0], vmin = 0, vmax =Op[i,0].max(), cmap = 'gray')
+    #plt.figure()
+    #plt.imshow(Mask, vmin = 0, vmax = 1, cmap = 'gray')
+    #plt.figure()
+    #plt.imshow(Y1, vmin = 0, vmax = Y.max(), cmap = 'gray')
+    plt.show()
+    # --------------------------------------------------------------------------
 
     # Calculation of Center-surround differences
     center = (2,3,4)
