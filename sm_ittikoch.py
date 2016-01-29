@@ -14,14 +14,19 @@ import matplotlib.pyplot as plt
 import cv2
 
 ## 
-# @brief  
+# @brief Calculate the orientation (Gabor) pyramid
 #
-# @param 
-# @param 
+# @param im: input image
+# @param degrees: orientation angle (in degrees)
+# @param L: levels of the decomposition
+# @param sigma: standard deviation of the Gaussian envelope (Gabor filter)
+# @param lambd: sine wavelength (Gabor filter)
+# @param gamma: Gabor filter aspect ratio
+# @param psi: Gabor filter frequency shift
 #
-# @retval 
+# @retval out: pyramid (list of images)
 # 
-def OrientPyr( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = np.pi * 0.5 ):  # VERIFIED !!
+def OrientPyr( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = np.pi * 0.5 ):
     imf = []
     imd = []
     out = []
@@ -57,7 +62,8 @@ def OrientPyr( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = 
          # --- test ---
          #print(tgtSize, type(tgtSize))
          # ------
-         imTemp = scipy.misc.imresize( imTemp2, size = tgtSize )
+         #imTemp = scipy.misc.imresize( imTemp2, size = tgtSize )
+         imTemp = cv2.resize(imTemp2,dsize = (tgtSize[1],tgtSize[0]),interpolation = 1)
          imd.append( imTemp  )
     
     for i in range( L ):
@@ -65,9 +71,9 @@ def OrientPyr( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = 
         # --- test ---
         #plt.figure()
         #plt.imshow(out[i], cmap = 'gray' )
-        #plt.show()
         # ------
-
+    
+    #plt.show()
     return out
 
 
@@ -99,12 +105,12 @@ def GaussPyr( im, n ):  #(VERIFIED)
     return out
 
 ## 
-# @brief 
+# @brief Non linear normalisation 
 #
-# @param 
-# @param 
+# @param im: input map
+# @param k: number of repeatitions
 #
-# @retval 
+# @retval normalised map
 #
 def NonLinNorm( im, k = 10 ):
     #k : number of divisions for each dimension
@@ -155,70 +161,64 @@ def NonLinNorm( im, k = 10 ):
 ## 
 # @brief Calculate center-surround feature maps for Intensity and Orientation components
 #
-# @param 
-# @param 
+# @param pyrm: input pyramid 
+# @param center: pyramid levels that are taken as centers (tuple, array, list )
+# @param delta: pyramid level shifts to determine surroundings (tuple, array, list)
 #
-# @retval 
+# @retval out: list of center-surround feature maps
 #
-def CenterSurr( pyrmd, center, delta ):
+def CenterSurr( pyrmd, center, delta ):  # VERIFIED
     out = []
     for i in center:
         for j in delta:
             temp = cv2.resize(pyrmd[j+i-1],dsize = (pyrmd[i-1].shape[1],pyrmd[i-1].shape[0]),interpolation = 1)
-            out.append(pyrmd[i-1]-temp)
+            out.append(np.abs(pyrmd[i-1]-temp))
+            # --- test ---
+            plt.figure()
+            plt.imshow(np.abs(pyrmd[i-1]-temp), cmap = 'gray' )
+            plt.show()
+            # ------
     return out
+
 ## 
-# @brief 
+# @brief Calculate centre-surround feature maps for Colour components
 #
-# @param 
-# @param 
+# @param Ap, Bp: first and second colour pyramids
+# @param center: pyramid levels that are taken as centers (tuple, array, list )
+# @param delta: pyramid level shifts to determine surroundings (tuple, array, list)
 #
-# @retval 
+# @retval out: list of center-surround feature maps
 #
-def CenterSurrC( Ap, Bp, center, delta ):
+def CenterSurrC( Ap, Bp, center, delta ):  # VERIFIED
     out = []
     for i in center:
         for j in delta:
             temp1 = cv2.resize(Ap[j+i-1],dsize = (Ap[i-1].shape[1],Ap[i-1].shape[0]),interpolation = 1)
             temp2 = cv2.resize(Bp[j+i-1],dsize = (Bp[i-1].shape[1],Bp[i-1].shape[0]),interpolation = 1)
-            out.append((Ap[i-1]-Bp[i-1])-(temp2-temp1))
-    return out
-## 
-# @brief 
-#
-# @param 
-# @param 
-#
-# @retval 
-#
-def CenterSurrO( Op, center, delta ):
-    out = []
-    for theta in range(len(Op)):
-        for i in center:
-            for j in delta:
-                #print i,j,theta
-                temp = cv2.resize(Op[theta][j+i-1],dsize = (Op[theta][i-1].shape[1],Op[theta][i-1].shape[0]),interpolation = 1)
-                out.append(Op[theta][i-1]-temp)
+            out.append(np.abs( ( Ap[ i - 1 ] - Bp[ i - 1 ] ) - ( temp2 - temp1 ) ) )
+            # --- test ---
+            #plt.figure()
+            #plt.imshow(out[len(out)-1], cmap = 'gray' )
+            #plt.show()
+            # ------
     return out
 
-
 ## 
-# @brief 
+# @brief Calculate the conspicuity map from a given centre-surrounding difference
 #
-# @param 
-# @param 
+# @param C: centre-surrounding difference
 #
-# @retval 
+# @retval out: conspicuity map
 #
 def ConspMapI( C ):
-    out = np.zeros( C[len(C)-1].shape )
+    out = np.zeros( C[len(C)-1].shape ) # matrix of zeros with the same size of scale 4 centre-surround difference
     sizet = C[len(C)-1].shape # target size
     for i in range(len(C)):
         if (C[i].shape != sizet):
             temp = cv2.resize(C[i],dsize = (sizet[1],sizet[0]),interpolation = 1)
         else:
             temp = C[i]
-        out += NonLinNorm( temp )
+        out += NonLinNorm( temp ) #Verify this one !!! Pay attention to the  
     return out
 ## 
 # @brief 
@@ -342,22 +342,26 @@ def sm( img ):
     O90  = OrientPyr(I, degrees = 90,  L=N)  # Calculation of orientation components
     O135 = OrientPyr(I, degrees = 135, L=N)  # Calculation of orientation components
     
-    # Calculation of Center-surround differences
+    # Calculation of Center-surround differences (VERIFIED)
     center = (2,3,4)
     delta = (3,4)
     # - intensity
-    Csdi = CenterSurr(Ip, center, delta)
+    Csdi = CenterSurr( Ip, center, delta )
     # - color 
     # -- RG components
-    Csdrg = CenterSurrC(Rp, Gp, center, delta)
+    Csdrg = CenterSurrC( Rp, Gp, center, delta ) 
     # -- BY components
-    Csdby = CenterSurrC(Bp, Yp, center, delta)
+    Csdby = CenterSurrC( Bp, Yp, center, delta )
     # -- Orientation components
-    Csdor = CenterSurrO(Op, center, delta)
-    '''
+    Csdor0   = CenterSurr( O0  , center, delta )
+    Csdor45  = CenterSurr( O45 , center, delta )
+    Csdor90  = CenterSurr( O90 , center, delta )
+    Csdor135 = CenterSurr( O135, center, delta )
+    
     # Conspicuity maps
     # - instensity
     CmI = ConspMapI( Csdi )
+    '''
     # - color
     CmC = ConspMapC( Csdrg, Csdby )
     # - orientation
