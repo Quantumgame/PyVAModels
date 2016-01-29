@@ -31,8 +31,10 @@ plt.imshow(img,vmin = 0, vmax = 255)
 #plt.imshow(CmI,cmap='gray')
 #plt.figure()
 #plt.imshow(CmC,cmap='gray')
+'''
 plt.figure()
 plt.imshow(imsm,cmap='gray',vmin = 0, vmax = 0.850*imsm.max())
 plt.figure();
 plt.imshow(imsm>(0.70*imsm.max()),cmap='gray',vmin = 0, vmax = 1)
+'''
 plt.show()

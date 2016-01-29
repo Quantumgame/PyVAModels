@@ -8,7 +8,7 @@
 
 import numpy as np
 import scipy.misc
-import scipy
+import scipy.signal
 import matplotlib.image as imge
 import matplotlib.pyplot as plt 
 import cv2
@@ -20,8 +20,8 @@ import cv2
 # @param 
 #
 # @retval 
-# NEED TO BE REFACTORED !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-def OrientPyr( im,degree=0,N=8,sigma=5,lambd=10,gamma=0.5,psi=0 ):
+# 
+def OrientPyr( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = np.pi * 0.5 ):  # VERIFIED !!
     imf = []
     imd = []
     out = []
@@ -29,53 +29,47 @@ def OrientPyr( im,degree=0,N=8,sigma=5,lambd=10,gamma=0.5,psi=0 ):
     imTemp = np.copy( im )
     
     hGauss = np.array( [ [ 1.0, 4, 6, 4, 1 ], [ 4, 16, 24, 16, 4 ], [ 6, 24, 36, 24, 6 ], [ 4, 16, 24, 16, 4 ], [ 1, 4, 6, 4, 1 ] ] )
-    hGabor = cv2.getGaborKernel((size, size), sigma, theta, lambd, gamma, psi)  # size ??
-    hGabor /= hGabor.sum()
+    hGauss /= hGauss.sum()
+    # --- test ---
+    #HGauss = np.fft.fftshift(np.fft.fft2(hGauss,s=(255,255)))
+    #plt.figure()
+    #plt.imshow(np.abs(HGauss), cmap = 'gray' )
+    # ------
 
-    for i in range( N + 1 ):
-         imTemp2 = scipy.signal.convolve2D( imTemp, hGauss, mode = 'same' )
+    # --- teste --- 
+    #degrees = 135
+    # ------
+    theta = degrees * np.pi / 180
+    gaborSize = 8 * sigma + 5 
+    hGabor = cv2.getGaborKernel( ( gaborSize, gaborSize ), sigma, theta, lambd, gamma, psi)  # size ??
+    hGabor /= hGabor.sum()
+    # --- test ---
+    #HGabor = np.fft.fftshift(np.fft.fft2(hGabor,s=(255,255)))
+    #plt.figure()
+    #plt.imshow(np.abs(HGabor), cmap = 'gray' )
+    #plt.show()
+    # ------
+
+    for i in range( L + 1 ):
+         imTemp2 = scipy.signal.convolve2d( imTemp, hGauss, mode = 'same' )
          imf.append( imTemp2  ) # colocar o nome correto
-         # tgtSize = ( (src.cols + 1)/2, (scr.rows + 1)/2 )
-         imTemp = sp.misc.imresize( imTemp2, size = tgtSize )
+         tgtSize = ( (imTemp2.shape[0] + 1)/2, (imTemp2.shape[1] + 1)/2 )
+         # --- test ---
+         #print(tgtSize, type(tgtSize))
+         # ------
+         imTemp = scipy.misc.imresize( imTemp2, size = tgtSize )
          imd.append( imTemp  )
     
-    for i in range( N  ):
-        out.append( scipy.signal.convolve2D( imd[ i ] - imf[ i + 1 ], hGabor, mode='same' ) )
+    for i in range( L ):
+        out.append( scipy.signal.convolve2d( imd[ i ] - imf[ i + 1 ], hGabor, mode='same' ) )
+        # --- test ---
+        #plt.figure()
+        #plt.imshow(out[i], cmap = 'gray' )
+        #plt.show()
+        # ------
 
     return out
-         
 
-    #def GaussPyrImg( iimg, n ):
-    #    imp = []
-    #    for i in range(n):
-    #        tmp = cv2.pyrDown(iimg)
-    #        iimg = tmp
-    #        imp.append(tmp)
-    #    return imp
-    #    
-    #if (type(im) is type([])): # if it is a list
-    #    out = []
-    #    for j in range(len(im)):
-    #        out.append(GaussPyrImg(im[j],n))
-    #else:
-    #    out = GaussPyrImg( im, n )
-    #
-    #return out
-    #out = []
-    #size = 8*sigma +5
-    #for i in range(len(deg)):
-    #    theta = deg[i]* np.pi / 180
-    #    #getGaborKernel(ksize,sigma,theta,lambd,gamma,psi=CV_PI*0.5,ktype=CV_64F )
-    #    h = cv2.getGaborKernel((size, size), sigma, theta, lambd, gamma, psi)
-    #    
-    #    h /= h.sum()
-    #    # ---
-    #    '''plt.figure()
-    #    plt.imshow(h,cmap='Oranges')
-    #    # ---'''
-    #    temp = cv2.filter2D(im, -1, h)
-    #    out.append(temp)
-    #return out
 
 ## 
 # @brief This function creates a Gaussian pyramid of n levels
@@ -159,7 +153,7 @@ def NonLinNorm( im, k = 10 ):
     return temp * ((M-mean)** 2)
 
 ## 
-# @brief 
+# @brief Calculate center-surround feature maps for Intensity and Orientation components
 #
 # @param 
 # @param 
@@ -336,29 +330,18 @@ def sm( img ):
     # --------------------------------------------------------------------------
 
 
-    # Creating the Gaussian pyramids
+    # Creating the Gaussian pyramids (VERIFIED)
     N = 8 # pyramid levels
-    Ip   = GaussPyr(I,N)                  #Intensity
-    Rp   = GaussPyr(R,N)                  # Red
-    Gp   = GaussPyr(G,N)                  # Green
-    Bp   = GaussPyr(B,N)                  # Blue
-    Yp   = GaussPyr(Y,N)                  # Yellow
-    O0   = OrientPyr(I, degrees = 0,  N)  # Calculation of orientation components
-    O45  = OrientPyr(I, degrees = 45, N)  # Calculation of orientation components
-    O90  = OrientPyr(I, degrees = 90, N)  # Calculation of orientation components
-    O135 = OrientPyr(I, degrees = 135,N)  # Calculation of orientation components
-   
-    # for test purpose only: comment or erase it after verification ------------
-    for i in range(N):
-         plt.figure()
-         plt.imshow(Op[i,0], vmin = 0, vmax =Op[i,0].max(), cmap = 'gray')
-    #plt.figure()
-    #plt.imshow(Mask, vmin = 0, vmax = 1, cmap = 'gray')
-    #plt.figure()
-    #plt.imshow(Y1, vmin = 0, vmax = Y.max(), cmap = 'gray')
-    plt.show()
-    # --------------------------------------------------------------------------
-
+    Ip   = GaussPyr(I,N)                     #Intensity
+    Rp   = GaussPyr(R,N)                     # Red
+    Gp   = GaussPyr(G,N)                     # Green
+    Bp   = GaussPyr(B,N)                     # Blue
+    Yp   = GaussPyr(Y,N)                     # Yellow
+    O0   = OrientPyr(I, degrees = 0,   L=N)  # Calculation of orientation components
+    O45  = OrientPyr(I, degrees = 45,  L=N)  # Calculation of orientation components
+    O90  = OrientPyr(I, degrees = 90,  L=N)  # Calculation of orientation components
+    O135 = OrientPyr(I, degrees = 135, L=N)  # Calculation of orientation components
+    
     # Calculation of Center-surround differences
     center = (2,3,4)
     delta = (3,4)
@@ -371,7 +354,7 @@ def sm( img ):
     Csdby = CenterSurrC(Bp, Yp, center, delta)
     # -- Orientation components
     Csdor = CenterSurrO(Op, center, delta)
-
+    '''
     # Conspicuity maps
     # - instensity
     CmI = ConspMapI( Csdi )
@@ -383,5 +366,6 @@ def sm( img ):
     # Saliency Map
     SM = NonLinNorm( CmI ) + NonLinNorm( CmC ) + NonLinNorm( CmO )
     SM /= 3
-
+    '''
+    SM = 0
     return(SM)
