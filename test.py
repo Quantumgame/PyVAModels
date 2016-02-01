@@ -20,21 +20,12 @@ import sm_ittikoch as ikvam
 #  by the user when the function is called
 img = plt.imread('teste2.jpg')
 
-imsm = ikvam.sm(img)
+imsm = ikvam.sm( img, lps = 3)
 
 # -------------------------
 #for i in range(len(Csdor)):
 plt.figure()
 plt.imshow(img,vmin = 0, vmax = 255)
-#plt.figure()
-#    plt.imshow(Csdor[i],cmap='gray', vmin = 0, vmax = 255)
-#plt.imshow(CmI,cmap='gray')
-#plt.figure()
-#plt.imshow(CmC,cmap='gray')
-'''
 plt.figure()
-plt.imshow(imsm,cmap='gray',vmin = 0, vmax = 0.850*imsm.max())
-plt.figure();
-plt.imshow(imsm>(0.70*imsm.max()),cmap='gray',vmin = 0, vmax = 1)
-'''
+plt.imshow(imsm,cmap='gray')
 plt.show()

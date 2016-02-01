@@ -1,10 +1,19 @@
-## @package sm_ittikoch.py
+''' sm_ittikoch.py
+
+This module implement a function that calculates the saliency map proposed by Itti, Koch and Neibur in 
+REFs.
+
+__license__ = "Cecill-C"
+__revision__ = " $Id: actor.py 1586 2009-01-30 15:56:25Z cokelaer $ "
+__docformat__ = 'reStructuredText'
+    
+
 #
 # @brief Saliency map (Itti & Koch)
 # @version 1.0
 # @author Ronaldo de Freitas Zampolo
 # @date 29.jan.2016
-
+'''
 
 import numpy as np
 import scipy.misc
@@ -56,7 +65,7 @@ def OrientPyr( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = 
     # ------
 
     for i in range( L + 1 ):
-         imTemp2 = scipy.signal.convolve2d( imTemp, hGauss, mode = 'same' )
+         imTemp2 = scipy.signal.convolve2d( imTemp, hGauss, mode = 'same', boundary = 'wrap' )
          imf.append( imTemp2  ) # colocar o nome correto
          tgtSize = ( (imTemp2.shape[0] + 1)/2, (imTemp2.shape[1] + 1)/2 )
          # --- test ---
@@ -67,7 +76,7 @@ def OrientPyr( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = 
          imd.append( imTemp  )
     
     for i in range( L ):
-        out.append( scipy.signal.convolve2d( imd[ i ] - imf[ i + 1 ], hGabor, mode='same' ) )
+        out.append( scipy.signal.convolve2d( imd[ i ] - imf[ i + 1 ], hGabor, mode='same', boundary = 'wrap' ) )
         # --- test ---
         #plt.figure()
         #plt.imshow(out[i], cmap = 'gray' )
@@ -174,9 +183,9 @@ def CenterSurr( pyrmd, center, delta ):  # VERIFIED
             temp = cv2.resize(pyrmd[j+i-1],dsize = (pyrmd[i-1].shape[1],pyrmd[i-1].shape[0]),interpolation = 1)
             out.append(np.abs(pyrmd[i-1]-temp))
             # --- test ---
-            plt.figure()
-            plt.imshow(np.abs(pyrmd[i-1]-temp), cmap = 'gray' )
-            plt.show()
+            #plt.figure()
+            #plt.imshow(np.abs(pyrmd[i-1]-temp), cmap = 'gray' )
+            #plt.show()
             # ------
     return out
 
@@ -203,34 +212,107 @@ def CenterSurrC( Ap, Bp, center, delta ):  # VERIFIED
             # ------
     return out
 
-## 
-# @brief Calculate the conspicuity map from a given centre-surrounding difference
-#
-# @param C: centre-surrounding difference
-#
-# @retval out: conspicuity map
-#
+
+def DogFilt(im,co=0.5,ci= 1.5,sigmao=2.0,sigmai=25.0,cte=0.02,loop=1,bound='wrap'):
+    '''
+    Implements a Difference of Gaussians (DoG) filtering, as described in *A saliency-based search mechanism for overt and covert shifts of visual attention* (Itti, Laurent and Koch, Christof; Vision Research, vol. 40, 10-12, pp. 1489-1506, 2000)
+
+    Parameters:
+
+    im: input image
+    co: multiplicative constant of the first Gaussian of the DoG (default value: 0.5)
+    ci: multiplicative constant of the second Gaussian of the DoG (default value: 1.5)
+    sigmao: standard deviation of the first Gaussian of the DoG (default value: 2), in % of the input image width
+    sigmai: standard deviation of the second Gaussian of the DoG (default value: 25), in % of the input image width
+    cte: inhibitory constant term (default value: 0.02)
+    loop: number of iteractions (default value: 1)
+    bound: how to handle boundaries (options: 'wrap' (default), 'fill', and 'symm')
+    
+    Output:
+    
+    filtim: filtered image
+
+    '''
+    # filter
+    h = np.zeros(im.shape) # create a zero matrix with the same dimensions of the input image
+    Lx,Ly = h.shape        # number of rows and columns
+    
+    # --- test ---
+    #print('Image Lx: ', Lx)
+    #plt.figure()
+    #plt.imshow( im, cmap='gray' )
+    #plt.show()
+    # ----
+    
+    xv = np.arange( Lx )     # vectors to create the mesh
+    yv = np.arange( Ly )
+    cx = ( Lx - 1 ) / 2           # centres (x and y)
+    cy = ( Ly - 1 ) / 2
+
+    xv = xv - cx	   # shift in the mesh vectors
+    yv = yv - cy
+
+    xm,ym = np.meshgrid( xv, yv )	# creating the meshgrid
+
+    sigmao = ( sigmao / 100 ) * Ly    # calculating standard deviations, considering image width
+    sigmai = ( sigmai / 100 ) * Ly
+    
+    
+    k1 = ( co**2 ) / ( 2 * np.pi * ( sigmao**2 ) ) # multiplicative terms: first and second gaussians
+    k2 = ( ci**2 ) / ( 2 * np.pi * ( sigmai**2 ) )
+    # --- test ---
+    #print(k1,sigmao)
+    #print(k2,sigmai)
+    # ------
+    
+    h = k1 * np.exp(-(xm**2+ym**2)/(2*(sigmao**2))) - k2 * np.exp(-(xm**2+ym**2)/(2*(sigmai**2))) # filter
+
+
+    filtim = im / im.max()   # image normalisation
+    
+    for i in range( loop ):
+        map1 = scipy.signal.convolve2d( filtim, h, boundary=bound, mode='same' ) # DoG filtering 
+        filtim = filtim + map1 - cte					   # image update
+        
+        mask = filtim > 0                # mask for elimination of negative terms
+        filtim = mask * filtim		 # masking
+        filtim = filtim / filtim.max()	 # image normalisation
+
+    return filtim #, h, xm, ym
+#=======================================================================
+
+
 def ConspMapI( C ):
+    ''' 
+    # @brief Calculate the conspicuity map from a given centre-surrounding difference (intensity component)
+    #
+    # @param C: centre-surrounding difference
+    #
+    # @retval out: conspicuity map
+    #
+    '''
     out = np.zeros( C[len(C)-1].shape ) # matrix of zeros with the same size of scale 4 centre-surround difference
     sizet = C[len(C)-1].shape # target size
-    for i in range(len(C)):
-        if (C[i].shape != sizet):
+    
+    for i in range(len(C)): # finding the conspicuity map for every feature map of the input list C
+        if (C[i].shape != sizet): # resizing if the feature map does not have the target dimensions
             temp = cv2.resize(C[i],dsize = (sizet[1],sizet[0]),interpolation = 1)
         else:
             temp = C[i]
-        out += NonLinNorm( temp ) #Verify this one !!! Pay attention to the  
+        out += DogFilt( temp, loop = 10 ) # Summing across scales
+    out = DogFilt( out, loop = 10 ) # Second DoG filtering
     return out
-## 
-# @brief 
-#
-# @param 
-# @param 
-#
-# @retval 
-#
+
 def ConspMapC( C1, C2 ):
+    '''
+    # @brief Calculate the conspicuity map form a given centre surround difference (colour components)
+    #
+    # @param C1, C2: centre-surround feature map
+    # @param 
+    #
+    # @retval out conspicuity map
+    '''
     out = np.zeros( C1[len(C1)-1].shape )
-    
     sizet = C1[len(C1)-1].shape # target size
     for i in range(len(C1)):
         if (C1[i].shape != sizet):
@@ -239,18 +321,21 @@ def ConspMapC( C1, C2 ):
         else:
             temp1 = C1[i]
             temp2 = C2[i]
-        out += NonLinNorm( temp1 ) + NonLinNorm( temp2 )
+        out += DogFilt( temp1, loop = 10 ) + DogFilt( temp2, loop = 10 )# Summing across scales
+    out = DogFilt( out, loop = 10 ) # Second DoG filtering
     return out
-## 
-# @brief 
-#
-# @param 
-# @param 
-#
-# @retval 
-#
-def ConspMapO( C, center, delta ):
-    outt = np.zeros( C[len(C)-1].shape )
+
+
+def ConspMapO( C, loops ):
+    ''' 
+    # @brief Calculate the conspicuity map from a given centre surround difference (orientation components, but it can be used for any componente, since the feature maps are organised into just one list) 
+    #
+    # @param C: list containing the feature maps from which the conspicuity maps will be calculated
+    # @param 
+    #
+    # @retval out conspicuity map
+    '''
+    #outt = np.zeros( C[len(C)-1].shape )
     out = np.zeros( C[len(C)-1].shape )
     sizet = C[len(C)-1].shape # target size
     for i in range(len(C)):
@@ -258,22 +343,23 @@ def ConspMapO( C, center, delta ):
             temp = cv2.resize(C[i],dsize = (sizet[1],sizet[0]),interpolation = 1)
         else:
             temp = C[i]
-        outt += NonLinNorm( temp )
-        if (np.mod(i,len(center)*len(delta)) == (len(center)*len(delta) - 1)):
-            out += NonLinNorm( outt )
-            outt = np.zeros( C[len(C)-1].shape )
+        out += DogFilt( temp, loop = loops )
+        #if (np.mod(i,len(center)*len(delta)) == (len(center)*len(delta) - 1)):
+    out = DogFilt( out, loop = loops )
+    #outt = np.zeros( C[len(C)-1].shape )
     return out
 
-## 
-# @brief Saliency map proposed by Itti, Koch and Niebur 
-# @detail 
-#
-# @param im: image (numpy array)
-# @param 
-#
-# @retval SM: saliency map (numpy array)
-#
-def sm( img ):
+def sm( img, lps = 1 ):
+    '''
+    # @brief Saliency map proposed by Itti, Koch and Niebur 
+    # @detail 
+    #
+    # @param im: image (numpy array)
+    # @param 
+    #
+    # @retval salMap: saliency map (numpy array)
+    #
+    '''
     # Spliting in rgb and converting to float  (VERIFIED)
     rt = img[:,:,0].astype(float) # temporary r 
     gt = img[:,:,1].astype(float) # temporary g 
@@ -357,19 +443,33 @@ def sm( img ):
     Csdor45  = CenterSurr( O45 , center, delta )
     Csdor90  = CenterSurr( O90 , center, delta )
     Csdor135 = CenterSurr( O135, center, delta )
+    Csdor =  Csdor0 + Csdor45 + Csdor90 + Csdor135 # list concatenation
+    # --- test ---
+    #print(len(Csdor))
+    # ------
     
     # Conspicuity maps
+    rounds = lps
     # - instensity
-    CmI = ConspMapI( Csdi )
-    '''
+    CmI = ConspMapO( Csdi, loops = rounds )
     # - color
-    CmC = ConspMapC( Csdrg, Csdby )
+    CmC = ConspMapO( Csdrg+Csdby, loops = rounds )
     # - orientation
-    CmO = ConspMapO( Csdor, center, delta )
-
+    CmO = ConspMapO( Csdor, loops = rounds)
+    
     # Saliency Map
-    SM = NonLinNorm( CmI ) + NonLinNorm( CmC ) + NonLinNorm( CmO )
-    SM /= 3
-    '''
-    SM = 0
-    return(SM)
+    salMap =  (CmI + CmC + CmO ) / 3.0
+        
+    # --- test ---
+    #plt.figure()
+    #plt.imshow(CmI, cmap='gray')
+    #plt.figure()
+    #plt.imshow(CmC, cmap='gray')
+    #plt.figure()
+    #plt.imshow(CmO, cmap='gray')
+    #plt.figure()
+    #plt.imshow(salMap, cmap='gray')
+    #plt.show()
+    # ------
+    #salMap = 0
+    return(salMap)
