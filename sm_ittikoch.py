@@ -1,5 +1,5 @@
 ''' sm_ittikoch.py
-
+Teste
 This module implement a function that calculates the saliency map proposed by Itti, Koch and Neibur in 
 REFs.
 
