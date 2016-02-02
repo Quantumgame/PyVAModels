@@ -14,13 +14,13 @@ import matplotlib.image as imge
 import matplotlib.pyplot as plt 
 import cv2
 
-import sm_ittikoch as ikvam
+import vamodels as vam
 
 # Load an color image - the input image will be provided
 #  by the user when the function is called
 img = plt.imread('teste2.jpg')
 
-imsm = ikvam.sm( img, lps = 3)
+imsm = vam.Smikn( img, lps = 3)
 
 # -------------------------
 #for i in range(len(Csdor)):

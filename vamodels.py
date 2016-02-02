@@ -1,4 +1,4 @@
-''' sm_ittikoch.py
+''' PyVAModels.py
 Teste
 This module implement a function that calculates the saliency map proposed by Itti, Koch and Neibur in 
 REFs.
@@ -349,7 +349,7 @@ def ConspMapO( C, loops ):
     #outt = np.zeros( C[len(C)-1].shape )
     return out
 
-def sm( img, lps = 1 ):
+def Smikn( img, lps = 1 ):
     '''
     # @brief Saliency map proposed by Itti, Koch and Niebur 
     # @detail 
