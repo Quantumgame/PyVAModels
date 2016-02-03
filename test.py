@@ -20,7 +20,7 @@ import vamodels as vam
 #  by the user when the function is called
 
 path = 'images/'
-image_name = 'teste.jpg'
+image_name = 'teste2.jpg'
 
 img = plt.imread(path+image_name)
 

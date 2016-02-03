@@ -1,13 +1,24 @@
-''' vamodels.py
-Teste
-This module implement a function that calculates the saliency map proposed by Itti, Koch and Neibur in 
-REFs.
+''' 
+**vamodel.py**
+  This module implements *visual attention models*.
+
+Current implementation includes:
+
+- Itti, Koch and Neibur model  [IKN98]_ [IK00]_.
+
+
+.. [IKN98] L. Itti, C. Koch, and E. Niebur. *A model of saliency-based visual attention for rapid scene analysis*, IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 20, n. 11, pp. 1254-1259, 1998.
+
+.. [IK00] L. Itti, and C. Koch. *A saliency-based search mechanism for overt and covert shifts of visual attention*, Vision Research, vol. 40, 10-12, pp. 1489-1506, 2000.
+
+
+Functions
+=========
 '''
-__version__ = "$Revision$"
-# $Source$
-__license__ = "Cecill-C"
-__revision__ = " $Id: actor.py 1586 2009-01-30 15:56:25Z cokelaer $ "
-__docformat__ = 'reStructuredText'
+#__version__ = "$Revision$"
+#__license__ = "Cecill-C"
+#__revision__ = " $Id: actor.py 1586 2009-01-30 15:56:25Z cokelaer $ "
+#__docformat__ = 'reStructuredText'
     
 
 import numpy as np
@@ -20,17 +31,32 @@ import cv2
 
 def orientation_pyramid( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = np.pi * 0.5 ):
     ''' 
-    @brief Calculate the orientation (Gabor) pyramid
-
-    @param im: input image
-    @param degrees: orientation angle (in degrees)
-    @param L: levels of the decomposition
-    @param sigma: standard deviation of the Gaussian envelope (Gabor filter)
-    @param lambd: sine wavelength (Gabor filter)
-    @param gamma: Gabor filter aspect ratio
-    @param psi: Gabor filter frequency shift
     
-    @retval out: pyramid (list of images)
+    Calculate the orientation (Gabor) pyramid
+
+    :param im: Input image.
+    :type im: array_like
+    
+    :param degrees: Orientation angle (in degrees)
+    :type degrees: real
+
+    :param L: Levels of the decomposition.
+    :type L: real
+
+    :param sigma: Standard deviation of the Gaussian envelope (Gabor filter).
+    :type sigma: real
+
+    :param lambd: Sine wavelength (Gabor filter).
+    :type lambd: real
+    
+    :param gamma: Gabor filter aspect ratio.
+    :type gamma: real
+
+    :param  psi: Gabor filter frequency shift.
+    :type psi: real
+    
+    :return: Pyramid (list of images)
+    :rtype: list_of_arrays 
     '''
     imf = []
     imd = []
@@ -71,12 +97,14 @@ def orientation_pyramid( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.
 
 def gaussian_pyramid( im, n ):  #(VERIFIED)
     '''
-    @brief This function creates a Gaussian pyramid of n levels
-    @detail The core is the OpenCV function *pyrDown*, which filters (Gaussian filter) and then downsample the input image by a factor of 2. 
-    @param im: image from which the pyramid will be created
-    @param n: number of pyramid levels
+     This function creates a Gaussian pyramid of *n* levels
+
+     The core is the OpenCV function *pyrDown*, which filters (Gaussian filter) and then downsamples the input image by a factor of 2. 
     
-    @retval out: list that contains the subimages that form the pyramid 
+    :param im: image from which the pyramid will be created
+    :param n: number of pyramid levels
+    
+    :returns: list that contains the subimages that form the pyramid 
     
     '''
     def image_gaussian_pyramid( iimg, n ):
@@ -99,13 +127,13 @@ def gaussian_pyramid( im, n ):  #(VERIFIED)
 
 def centre_surround_feature_map( pyrmd, center, delta ):  # VERIFIED
     ''' 
-    @brief Calculate center-surround feature maps for Intensity and Orientation components
+     Calculate center-surround feature maps for Intensity and Orientation components
     
-    @param pyrm: input pyramid 
-    @param center: pyramid levels that are taken as centers (tuple, array, list )
-    @param delta: pyramid level shifts to determine surroundings (tuple, array, list)
+    :param pyrm: input pyramid 
+    :param center: pyramid levels that are taken as centers (tuple, array, list )
+    :param delta: pyramid level shifts to determine surroundings (tuple, array, list)
     
-    @retval out: list of center-surround feature maps
+    :returns: list of center-surround feature maps
     '''
     out = []
     for i in center:
@@ -116,13 +144,13 @@ def centre_surround_feature_map( pyrmd, center, delta ):  # VERIFIED
 
 def centre_surround_colour_feature_map( Ap, Bp, center, delta ):  # VERIFIED
     ''' 
-    @brief Calculate centre-surround feature maps for Colour components
+     Calculate centre-surround feature maps for Colour components
     
-    @param Ap, Bp: first and second colour pyramids
-    @param center: pyramid levels that are taken as centers (tuple, array, list )
-    @param delta: pyramid level shifts to determine surroundings (tuple, array, list)
+    :param Ap, Bp: first and second colour pyramids
+    :param center: pyramid levels that are taken as centers (tuple, array, list )
+    :param delta: pyramid level shifts to determine surroundings (tuple, array, list)
     
-    @retval out: list of center-surround feature maps
+    :returns: list of center-surround feature maps
     '''
     out = []
     for i in center:
@@ -137,20 +165,16 @@ def difference_of_gaussians_filtering_and_update(im,co=0.5,ci= 1.5,sigmao=2.0,si
     '''
     Implements a Difference of Gaussians (DoG) filtering, as described in *A saliency-based search mechanism for overt and covert shifts of visual attention* (Itti, Laurent and Koch, Christof; Vision Research, vol. 40, 10-12, pp. 1489-1506, 2000)
 
-    Parameters:
-
-    im: input image
-    co: multiplicative constant of the first Gaussian of the DoG (default value: 0.5)
-    ci: multiplicative constant of the second Gaussian of the DoG (default value: 1.5)
-    sigmao: standard deviation of the first Gaussian of the DoG (default value: 2), in % of the input image width
-    sigmai: standard deviation of the second Gaussian of the DoG (default value: 25), in % of the input image width
-    cte: inhibitory constant term (default value: 0.02)
-    loop: number of iteractions (default value: 1)
-    bound: how to handle boundaries (options: 'wrap' (default), 'fill', and 'symm')
+    :param im: input image
+    :param co: multiplicative constant of the first Gaussian of the DoG (default value: 0.5)
+    :param ci: multiplicative constant of the second Gaussian of the DoG (default value: 1.5)
+    :param sigmao: standard deviation of the first Gaussian of the DoG (default value: 2), in % of the input image width
+    :param sigmai: standard deviation of the second Gaussian of the DoG (default value: 25), in % of the input image width
+    :param cte: inhibitory constant term (default value: 0.02)
+    :param loop: number of iteractions (default value: 1)
+    :param bound: how to handle boundaries (options: 'wrap' (default), 'fill', and 'symm')
     
-    Output:
-    
-    filtim: filtered image
+    :returns: filtered image
 
     '''
     # filter
@@ -197,12 +221,11 @@ def difference_of_gaussians_filtering_and_update(im,co=0.5,ci= 1.5,sigmao=2.0,si
 
 def conspicuity_map( C, loops ):
     ''' 
-    # @brief Calculate the conspicuity map from a given centre surround difference (orientation components, but it can be used for any componente, since the feature maps are organised into just one list) 
-    #
-    # @param C: list containing the feature maps from which the conspicuity maps will be calculated
-    # @param 
-    #
-    # @retval out conspicuity map
+    Calculate the conspicuity map from a given centre surround difference (orientation components, but it can be used for any componente, since the feature maps are organised into just one list) 
+    
+    :param C: list containing the feature maps from which the conspicuity maps will be calculated
+    
+    :returns:  conspicuity map
     '''
     out = np.zeros( C[len(C)-1].shape )
     sizet = C[len(C)-1].shape # target size
@@ -219,14 +242,13 @@ def conspicuity_map( C, loops ):
 
 def smikn( img, lps = 1, centre = (2,3,4), delta=(3,4), verbose = 'off' ):
     '''
-    # @brief Saliency map proposed by Itti, Koch and Niebur 
-    # @detail 
-    #
-    # @param im: image (numpy array)
-    # @param 
-    #
-    # @retval salMap: saliency map (numpy array)
-    #
+    Saliency map proposed by Itti, Koch and Niebur 
+     
+    
+    :param im: image (numpy array)
+       
+    :returns: saliency map (numpy array)
+    
     '''
     print('========================================================== ')
     pyramid_levels = centre[-1] + delta[-1]
