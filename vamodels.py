@@ -6,6 +6,7 @@ Current implementation includes:
 
 - Itti, Koch and Neibur model  [IKN98]_ [IK00]_.
 
+.. codeauthor:: Ronaldo de Freitas Zampolo <zampolo@ieee.org>
 
 .. [IKN98] L. Itti, C. Koch, and E. Niebur. *A model of saliency-based visual attention for rapid scene analysis*, IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 20, n. 11, pp. 1254-1259, 1998.
 
@@ -31,32 +32,34 @@ import cv2
 
 def orientation_pyramid( im,degrees = 0, L = 8, sigma = 1, lambd = 10, gamma =0.5 , psi = np.pi * 0.5 ):
     ''' 
-    
     Calculate the orientation (Gabor) pyramid
 
     :param im: Input image.
-    :type im: array_like
+    :type im: array
     
-    :param degrees: Orientation angle (in degrees)
+    :param  degrees: Orientation angle (in degrees)
     :type degrees: real
 
     :param L: Levels of the decomposition.
-    :type L: real
+    :type L: integer
 
     :param sigma: Standard deviation of the Gaussian envelope (Gabor filter).
     :type sigma: real
 
     :param lambd: Sine wavelength (Gabor filter).
     :type lambd: real
-    
+
     :param gamma: Gabor filter aspect ratio.
     :type gamma: real
 
-    :param  psi: Gabor filter frequency shift.
+    :param psi: Gabor filter frequency shift.
     :type psi: real
     
-    :return: Pyramid (list of images)
-    :rtype: list_of_arrays 
+    :returns: Pyramid (list of images)
+    :rtype: list
+
+    .. warning::
+        There are some issues concerning the size of input images. Specifically, if the pyramid decomposition is deep (many levels),  the size of subsampled versions can become too small resuting in some instability. In this case, nan results can arise. In order to bypass this problem, try lowering **L** parameter.
     '''
     imf = []
     imd = []
@@ -102,10 +105,13 @@ def gaussian_pyramid( im, n ):  #(VERIFIED)
      The core is the OpenCV function *pyrDown*, which filters (Gaussian filter) and then downsamples the input image by a factor of 2. 
     
     :param im: image from which the pyramid will be created
+    :type im: array
+
     :param n: number of pyramid levels
+    :type n: integer
     
-    :returns: list that contains the subimages that form the pyramid 
-    
+    :returns: image pyramid 
+    :rtype: list
     '''
     def image_gaussian_pyramid( iimg, n ):
         imp = []
@@ -130,10 +136,16 @@ def centre_surround_feature_map( pyrmd, center, delta ):  # VERIFIED
      Calculate center-surround feature maps for Intensity and Orientation components
     
     :param pyrm: input pyramid 
-    :param center: pyramid levels that are taken as centers (tuple, array, list )
+    :type pyrm: list
+
+    :param center: pyramid levels that are taken as centers
+    :type center: tuple, array or list of integers
+
     :param delta: pyramid level shifts to determine surroundings (tuple, array, list)
+    :type delta: tuple, array or list of integers
     
-    :returns: list of center-surround feature maps
+    :returns: center-surround feature maps
+    :rtype: list
     '''
     out = []
     for i in center:
@@ -146,11 +158,17 @@ def centre_surround_colour_feature_map( Ap, Bp, center, delta ):  # VERIFIED
     ''' 
      Calculate centre-surround feature maps for Colour components
     
-    :param Ap, Bp: first and second colour pyramids
-    :param center: pyramid levels that are taken as centers (tuple, array, list )
-    :param delta: pyramid level shifts to determine surroundings (tuple, array, list)
+    :param Ap,Bp: first and second colour pyramids
+    :type Ap,Bp: list
+
+    :param center: pyramid levels that are taken as centers 
+    :type center: tuple, array or list of integers
+
+    :param delta: pyramid level shifts to determine surroundings
+    :type delta: tuple, array, or list of integers
     
-    :returns: list of center-surround feature maps
+    :returns: center-surround colour feature maps
+    :rtype: list
     '''
     out = []
     for i in center:
@@ -165,16 +183,16 @@ def difference_of_gaussians_filtering_and_update(im,co=0.5,ci= 1.5,sigmao=2.0,si
     '''
     Implements a Difference of Gaussians (DoG) filtering, as described in *A saliency-based search mechanism for overt and covert shifts of visual attention* (Itti, Laurent and Koch, Christof; Vision Research, vol. 40, 10-12, pp. 1489-1506, 2000)
 
-    :param im: input image
-    :param co: multiplicative constant of the first Gaussian of the DoG (default value: 0.5)
-    :param ci: multiplicative constant of the second Gaussian of the DoG (default value: 1.5)
-    :param sigmao: standard deviation of the first Gaussian of the DoG (default value: 2), in % of the input image width
-    :param sigmai: standard deviation of the second Gaussian of the DoG (default value: 25), in % of the input image width
-    :param cte: inhibitory constant term (default value: 0.02)
-    :param loop: number of iteractions (default value: 1)
-    :param bound: how to handle boundaries (options: 'wrap' (default), 'fill', and 'symm')
+    :param im: input image:type
+    :param co: multiplicative constant of the first Gaussian of the DoG (default value: 0.5):type
+    :param ci: multiplicative constant of the second Gaussian of the DoG (default value: 1.5):type
+    :param sigmao: standard deviation of the first Gaussian of the DoG (default value: 2), in % of the input image width:type
+    :param sigmai: standard deviation of the second Gaussian of the DoG (default value: 25), in % of the input image width:type
+    :param cte: inhibitory constant term (default value: 0.02):type
+    :param loop: number of iteractions (default value: 1):type
+    :param bound: how to handle boundaries (options: 'wrap' (default), 'fill', and 'symm'):type
     
-    :returns: filtered image
+    :returns: filtered image:type
 
     '''
     # filter
@@ -223,9 +241,9 @@ def conspicuity_map( C, loops ):
     ''' 
     Calculate the conspicuity map from a given centre surround difference (orientation components, but it can be used for any componente, since the feature maps are organised into just one list) 
     
-    :param C: list containing the feature maps from which the conspicuity maps will be calculated
+    :param C: list containing the feature maps from which the conspicuity maps will be calculated:type
     
-    :returns:  conspicuity map
+    :returns:  conspicuity map:type
     '''
     out = np.zeros( C[len(C)-1].shape )
     sizet = C[len(C)-1].shape # target size
@@ -245,9 +263,9 @@ def smikn( img, lps = 1, centre = (2,3,4), delta=(3,4), verbose = 'off' ):
     Saliency map proposed by Itti, Koch and Niebur 
      
     
-    :param im: image (numpy array)
+    :param im: image (numpy array):type
        
-    :returns: saliency map (numpy array)
+    :returns: saliency map (numpy array):type
     
     '''
     print('========================================================== ')
